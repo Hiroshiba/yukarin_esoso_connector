@@ -1,0 +1,70 @@
+[project]
+name = "yukarin-esoso-connector"
+version = "0.1.0"
+authors = [
+    { name = "Hiroshiba", email = "hihokaruta@gmail.com" }
+]
+description = "English TTS inference connector integrating yukarin_es, yukarin_esa, and yukarin_esosoav"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "g2p-en>=2.1.0",
+    "librosa>=0.11.0",
+    "numpy>=2.2.5",
+    "pydantic>=2.11.7",
+    "pyyaml>=6.0.2",
+    "s3fs>=2025.5.1",
+    "scipy>=1.16.0",
+    "soundfile>=0.12.1",
+    "torch>=2.7.1",
+    "tqdm>=4.67.1",
+    "universal-pathlib>=0.2.6",
+    "yukarin-es",
+    "yukarin-esa",
+    "yukarin-esosoav",
+]
+
+[tool.uv.sources]
+yukarin-es = { git = "https://github.com/Hiroshiba/yukarin_es", rev = "d68df1c690fe2c6ba5e0ff7205e0125d93944c1f" }
+yukarin-esa = { git = "https://github.com/Hiroshiba/yukarin_esa", rev = "d5dc9d1801bcf504d7ed59c7f27b444b4645d48c" }
+yukarin-esosoav = { git = "https://github.com/Hiroshiba/yukarin_esosoav", rev = "d4855013c4605c48c2528818c0807fb9675dfa1a" }
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+    "pytest>=8.4.1",
+    "pyright>=1.1.403",
+    "ruff>=0.12.2",
+]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "W", "UP", "D", "D213", "PT", "NPY"]
+ignore = [
+    "E501",
+    "D400",
+    "D403",
+]
+unfixable = [
+    "F401",
+    "F841",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["yukarin_esoso_connector"]
+known-third-party = ["numpy", "torch"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/yukarin_esoso_connector"]
