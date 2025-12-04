@@ -2505,7 +2505,7 @@ requires-dist = [
     { name = "universal-pathlib", specifier = ">=0.2.6" },
     { name = "yukarin-es", git = "https://github.com/Hiroshiba/yukarin_es?rev=d68df1c690fe2c6ba5e0ff7205e0125d93944c1f" },
     { name = "yukarin-esa", git = "https://github.com/Hiroshiba/yukarin_esa?rev=d5dc9d1801bcf504d7ed59c7f27b444b4645d48c" },
-    { name = "yukarin-esosoav", git = "https://github.com/Hiroshiba/yukarin_esosoav?rev=d4855013c4605c48c2528818c0807fb9675dfa1a" },
+    { name = "yukarin-esosoav", git = "https://github.com/Hiroshiba/yukarin_esosoav?rev=ccc97782070d35fb1f36a46cb491ecd4ccc31d13" },
 ]
 
 [package.metadata.requires-dev]
@@ -2519,7 +2519,7 @@ dev = [
 [[package]]
 name = "yukarin-esosoav"
 version = "0.1.0"
-source = { git = "https://github.com/Hiroshiba/yukarin_esosoav?rev=d4855013c4605c48c2528818c0807fb9675dfa1a#d4855013c4605c48c2528818c0807fb9675dfa1a" }
+source = { git = "https://github.com/Hiroshiba/yukarin_esosoav?rev=ccc97782070d35fb1f36a46cb491ecd4ccc31d13#ccc97782070d35fb1f36a46cb491ecd4ccc31d13" }
 dependencies = [
     { name = "librosa" },
     { name = "numba" },
