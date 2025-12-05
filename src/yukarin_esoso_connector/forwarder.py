@@ -91,6 +91,11 @@ def _ensure_nltk_data():
     except LookupError:
         nltk.download("cmudict", quiet=True)
 
+    try:
+        nltk.data.find("tokenizers/punkt_tab")
+    except LookupError:
+        nltk.download("punkt_tab", quiet=True)
+
 
 def text_to_phoneme_data(text: str) -> tuple[list[str], list[int], list[int]]:
     _ensure_nltk_data()
@@ -129,6 +134,84 @@ def text_to_phoneme_data(text: str) -> tuple[list[str], list[int], list[int]]:
     vowel_indices = [i for i, ph in enumerate(phonemes) if ph in VOWEL_PHONEMES]
 
     return phonemes, stress_list, vowel_indices
+
+
+def text_to_word_phoneme_data(
+    text: str,
+) -> tuple[list[str], list[str], list[int], list[int], list[int]]:
+    _ensure_nltk_data()
+
+    import re
+
+    text_words = re.findall(r"\w+", text)
+
+    g2p = G2p()
+    phonemes_raw = g2p(text)
+
+    words = []
+    all_phonemes = []
+    all_stress_list = []
+    word_boundaries = []
+    in_word = False
+    word_idx = 0
+
+    for ph in phonemes_raw:
+        if ph == " ":
+            if in_word:
+                in_word = False
+            continue
+        elif ph[-1] in ("0", "1", "2"):
+            if not in_word:
+                word_boundaries.append(len(all_phonemes))
+                words.append(text_words[word_idx])
+                word_idx += 1
+                in_word = True
+            all_phonemes.append(ph[:-1])
+            all_stress_list.append(int(ph[-1]))
+        elif ph.upper() in ARPA_PHONEMES:
+            if not in_word:
+                word_boundaries.append(len(all_phonemes))
+                words.append(text_words[word_idx])
+                word_idx += 1
+                in_word = True
+            all_phonemes.append(ph.upper())
+            all_stress_list.append(0)
+        elif ph in (",", ".", "!", "?", ";", ":", "-"):
+            if in_word:
+                in_word = False
+            word_boundaries.append(len(all_phonemes))
+            words.append("pau")
+            all_phonemes.append("pau")
+            all_stress_list.append(0)
+        else:
+            raise ValueError(f"Unknown phoneme: {ph}")
+
+    if not all_phonemes:
+        all_phonemes = ["pau"]
+        all_stress_list = [0]
+        words = ["pau"]
+        word_boundaries = [0, 1]
+    else:
+        if all_phonemes[0] != "pau":
+            all_phonemes.insert(0, "pau")
+            all_stress_list.insert(0, 0)
+            word_boundaries = [b + 1 for b in word_boundaries]
+            words.insert(0, "pau")
+            word_boundaries.insert(0, 0)
+
+        if all_phonemes[-1] != "pau":
+            all_phonemes.append("pau")
+            all_stress_list.append(0)
+            words.append("pau")
+            word_boundaries.append(len(all_phonemes) - 1)
+
+        word_boundaries.append(len(all_phonemes))
+
+    vowel_indices = [
+        i for i, ph in enumerate(all_phonemes) if ph in VOWEL_PHONEMES
+    ]
+
+    return words, all_phonemes, all_stress_list, vowel_indices, word_boundaries
 
 
 class Forwarder:
@@ -270,7 +353,7 @@ class Forwarder:
         vowel_end_frames = (vowel_end_times * rate).astype(int)
 
         for i, (start_frame, end_frame) in enumerate(
-            zip(vowel_start_frames, vowel_end_frames)
+            zip(vowel_start_frames, vowel_end_frames, strict=True)
         ):
             f0_frames[start_frame:end_frame] = f0_vowels[i]
 
