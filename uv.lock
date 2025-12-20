@@ -2716,9 +2716,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "yukarin-esa"
+name = "yukarin-esad"
 version = "0.1.0"
-source = { git = "https://github.com/Hiroshiba/yukarin_esa?rev=d5dc9d1801bcf504d7ed59c7f27b444b4645d48c#d5dc9d1801bcf504d7ed59c7f27b444b4645d48c" }
+source = { git = "https://github.com/Hiroshiba/yukarin_esad?rev=71bfe03d398823119ba9555fd2b5bf768d01e59d#71bfe03d398823119ba9555fd2b5bf768d01e59d" }
 dependencies = [
     { name = "librosa" },
     { name = "numba" },
@@ -2750,7 +2750,7 @@ dependencies = [
     { name = "tqdm" },
     { name = "universal-pathlib" },
     { name = "yukarin-es" },
-    { name = "yukarin-esa" },
+    { name = "yukarin-esad" },
     { name = "yukarin-esosoav" },
 ]
 
@@ -2777,7 +2777,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.67.1" },
     { name = "universal-pathlib", specifier = ">=0.2.6" },
     { name = "yukarin-es", git = "https://github.com/Hiroshiba/yukarin_es?rev=d68df1c690fe2c6ba5e0ff7205e0125d93944c1f" },
-    { name = "yukarin-esa", git = "https://github.com/Hiroshiba/yukarin_esa?rev=d5dc9d1801bcf504d7ed59c7f27b444b4645d48c" },
+    { name = "yukarin-esad", git = "https://github.com/Hiroshiba/yukarin_esad?rev=71bfe03d398823119ba9555fd2b5bf768d01e59d" },
     { name = "yukarin-esosoav", git = "https://github.com/Hiroshiba/yukarin_esosoav?rev=ccc97782070d35fb1f36a46cb491ecd4ccc31d13" },
 ]
 

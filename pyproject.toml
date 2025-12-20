@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = [
     { name = "Hiroshiba", email = "hihokaruta@gmail.com" }
 ]
-description = "English TTS inference connector integrating yukarin_es, yukarin_esa, and yukarin_esosoav"
+description = "English TTS inference connector integrating yukarin_es, yukarin_esad, and yukarin_esosoav"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -21,13 +21,13 @@ dependencies = [
     "tqdm>=4.67.1",
     "universal-pathlib>=0.2.6",
     "yukarin-es",
-    "yukarin-esa",
+    "yukarin-esad",
     "yukarin-esosoav",
 ]
 
 [tool.uv.sources]
 yukarin-es = { git = "https://github.com/Hiroshiba/yukarin_es", rev = "d68df1c690fe2c6ba5e0ff7205e0125d93944c1f" }
-yukarin-esa = { git = "https://github.com/Hiroshiba/yukarin_esa", rev = "d5dc9d1801bcf504d7ed59c7f27b444b4645d48c" }
+yukarin-esad = { git = "https://github.com/Hiroshiba/yukarin_esad", rev = "71bfe03d398823119ba9555fd2b5bf768d01e59d" }
 yukarin-esosoav = { git = "https://github.com/Hiroshiba/yukarin_esosoav", rev = "ccc97782070d35fb1f36a46cb491ecd4ccc31d13" }
 
 [dependency-groups]

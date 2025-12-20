@@ -10,10 +10,10 @@ from yukarin_esoso_connector.forwarder import Forwarder
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--yukarin_es_model_dir", required=True, type=UPath)
-    parser.add_argument("--yukarin_esa_model_dir", required=True, type=UPath)
+    parser.add_argument("--yukarin_esad_model_dir", required=True, type=UPath)
     parser.add_argument("--yukarin_esosoav_model_dir", required=True, type=UPath)
     parser.add_argument("--yukarin_es_iteration", type=int)
-    parser.add_argument("--yukarin_esa_iteration", type=int)
+    parser.add_argument("--yukarin_esad_iteration", type=int)
     parser.add_argument("--yukarin_esosoav_iteration", type=int)
     parser.add_argument("--output_dir", type=Path, default=Path("./output"))
     parser.add_argument("--use_gpu", action="store_true")
@@ -28,11 +28,11 @@ def main():
 
     forwarder = Forwarder(
         yukarin_es_model_dir=args.yukarin_es_model_dir,
-        yukarin_esa_model_dir=args.yukarin_esa_model_dir,
+        yukarin_esad_model_dir=args.yukarin_esad_model_dir,
         yukarin_esosoav_model_dir=args.yukarin_esosoav_model_dir,
         use_gpu=args.use_gpu,
         yukarin_es_iteration=args.yukarin_es_iteration,
-        yukarin_esa_iteration=args.yukarin_esa_iteration,
+        yukarin_esad_iteration=args.yukarin_esad_iteration,
         yukarin_esosoav_iteration=args.yukarin_esosoav_iteration,
     )
 

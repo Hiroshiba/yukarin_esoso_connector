@@ -8,8 +8,8 @@ from upath import UPath
 from yukarin_es.config import Config as ConfigEs
 from yukarin_es.generator import Generator as GeneratorEs
 from yukarin_es.utility.upath_utility import to_local_path
-from yukarin_esa.config import Config as ConfigEsa
-from yukarin_esa.generator import Generator as GeneratorEsa
+from yukarin_esad.config import Config as ConfigEsad
+from yukarin_esad.generator import Generator as GeneratorEsad
 from yukarin_esosoav.config import Config as ConfigEsosoav
 from yukarin_esosoav.generator import Generator as GeneratorEsosoav
 
@@ -218,15 +218,15 @@ class Forwarder:
     def __init__(
         self,
         yukarin_es_model_dir: UPath | Path,
-        yukarin_esa_model_dir: UPath | Path,
+        yukarin_esad_model_dir: UPath | Path,
         yukarin_esosoav_model_dir: UPath | Path,
         use_gpu: bool,
         yukarin_es_iteration: int | None = None,
-        yukarin_esa_iteration: int | None = None,
+        yukarin_esad_iteration: int | None = None,
         yukarin_esosoav_iteration: int | None = None,
     ):
         yukarin_es_model_dir = UPath(yukarin_es_model_dir)
-        yukarin_esa_model_dir = UPath(yukarin_esa_model_dir)
+        yukarin_esad_model_dir = UPath(yukarin_esad_model_dir)
         yukarin_esosoav_model_dir = UPath(yukarin_esosoav_model_dir)
 
         config_es = ConfigEs.from_dict(
@@ -246,21 +246,21 @@ class Forwarder:
         self.yukarin_es_generator.predictor.apply(remove_weight_norm)
         print("yukarin_es loaded!")
 
-        config_esa = ConfigEsa.from_dict(
-            yaml.safe_load((yukarin_esa_model_dir / "config.yaml").read_text())
+        config_esad = ConfigEsad.from_dict(
+            yaml.safe_load((yukarin_esad_model_dir / "config.yaml").read_text())
         )
 
-        predictor_esa_path = get_predictor_model_path(
-            yukarin_esa_model_dir, iteration=yukarin_esa_iteration
+        predictor_esad_path = get_predictor_model_path(
+            yukarin_esad_model_dir, iteration=yukarin_esad_iteration
         )
-        print("yukarin_esa predictor:", predictor_esa_path)
-        self.yukarin_esa_generator = GeneratorEsa(
-            config=config_esa,
-            predictor=to_local_path(predictor_esa_path),
+        print("yukarin_esad predictor:", predictor_esad_path)
+        self.yukarin_esad_generator = GeneratorEsad(
+            config=config_esad,
+            predictor=to_local_path(predictor_esad_path),
             use_gpu=use_gpu,
         )
-        self.yukarin_esa_generator.predictor.apply(remove_weight_norm)
-        print("yukarin_esa loaded!")
+        self.yukarin_esad_generator.predictor.apply(remove_weight_norm)
+        print("yukarin_esad loaded!")
 
         config_esosoav = ConfigEsosoav.from_dict(
             yaml.safe_load((yukarin_esosoav_model_dir / "config.yaml").read_text())
@@ -319,12 +319,18 @@ class Forwarder:
             torch.tensor(vowel_indices, dtype=torch.long).to(self.device)
         ]
 
-        f0_output = self.yukarin_esa_generator(
+        noise_f0_list = [torch.randn(len(phonemes), device=self.device)]
+        noise_vuv_list = [torch.randn(len(phonemes), device=self.device)]
+
+        f0_output = self.yukarin_esad_generator(
+            noise_f0_list=noise_f0_list,
+            noise_vuv_list=noise_vuv_list,
             phoneme_ids_list=phoneme_ids_tensor_list,
             phoneme_durations_list=durations_tensor_list,
             phoneme_stress_list=stress_tensor_list,
             vowel_index_list=vowel_indices_tensor_list,
             speaker_id=numpy.array([f0_speaker_id]),
+            step_num=10,
         )
 
         f0_vowels = f0_output.f0[0].cpu().numpy()

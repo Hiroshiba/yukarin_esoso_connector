@@ -1,17 +1,17 @@
 import marimo
 
-__generated_with = "0.10.14"
+__generated_with = "0.18.2"
 app = marimo.App(width="full")
 
 
 @app.cell
-def __():
+def _():
     import marimo as mo
     return (mo,)
 
 
 @app.cell
-def __():
+def _():
     import base64
     import io
 
@@ -28,6 +28,7 @@ def __():
     )
     return (
         ARPA_PHONEMES,
+        Forwarder,
         UPath,
         VOWEL_PHONEMES,
         base64,
@@ -36,31 +37,34 @@ def __():
         soundfile,
         text_to_word_phoneme_data,
         torch,
-        Forwarder,
     )
 
 
 @app.cell
-def __(mo):
-    mo.md("# English TTS with Prosody Control")
+def _(mo):
+    mo.md("""
+    # English TTS with Prosody Control
+    """)
     return
 
 
 @app.cell
-def __(mo):
-    mo.md("## Model Configuration")
+def _(mo):
+    mo.md("""
+    ## Model Configuration
+    """)
     return
 
 
 @app.cell
-def __(mo):
+def _(mo):
     model_dir_input = mo.ui.text(
         value="./hiho_models/yukarin_es/grad_acc-lr1e-02-d1e-03-ga4-try0",
         label="Yukarin ES Model Directory",
     )
-    model_dir_esa_input = mo.ui.text(
-        value="./hiho_models/yukarin_esa/init_l1-lr3e-03-d3e-03-try0",
-        label="Yukarin ESA Model Directory",
+    model_dir_esad_input = mo.ui.text(
+        value="./hiho_models/yukarin_esad/init-rectified_flow-lr1e-03-block8-try0",
+        label="Yukarin ESAD Model Directory",
     )
     model_dir_esosoav_input = mo.ui.text(
         value="./hiho_models/yukarin_esosoav/noac-lr2e-04-d1e-02-bs32-try0",
@@ -77,17 +81,31 @@ def __(mo):
         label="Use GPU",
     )
 
-    mo.vstack([model_dir_input, model_dir_esa_input, model_dir_esosoav_input, speaker_id_input, use_gpu_input])
-    return model_dir_input, model_dir_esa_input, model_dir_esosoav_input, speaker_id_input, use_gpu_input
+    mo.vstack([model_dir_input, model_dir_esad_input, model_dir_esosoav_input, speaker_id_input, use_gpu_input])
+    return (
+        model_dir_esad_input,
+        model_dir_esosoav_input,
+        model_dir_input,
+        speaker_id_input,
+        use_gpu_input,
+    )
 
 
 @app.cell
-def __(Forwarder, UPath, model_dir_input, model_dir_esa_input, model_dir_esosoav_input, torch, use_gpu_input):
+def _(
+    Forwarder,
+    UPath,
+    model_dir_esad_input,
+    model_dir_esosoav_input,
+    model_dir_input,
+    torch,
+    use_gpu_input,
+):
     torch.set_grad_enabled(False)
 
     forwarder = Forwarder(
         yukarin_es_model_dir=UPath(model_dir_input.value),
-        yukarin_esa_model_dir=UPath(model_dir_esa_input.value),
+        yukarin_esad_model_dir=UPath(model_dir_esad_input.value),
         yukarin_esosoav_model_dir=UPath(model_dir_esosoav_input.value),
         use_gpu=use_gpu_input.value,
     )
@@ -95,13 +113,15 @@ def __(Forwarder, UPath, model_dir_input, model_dir_esa_input, model_dir_esosoav
 
 
 @app.cell
-def __(mo):
-    mo.md("## Text Input")
+def _(mo):
+    mo.md("""
+    ## Text Input
+    """)
     return
 
 
 @app.cell
-def __(mo):
+def _(mo):
     text_input = mo.ui.text_area(
         value="VOICEVOX is a free text to speech software by Hiho, that utilizes a deep learning.",
         label="Text to synthesize",
@@ -111,20 +131,22 @@ def __(mo):
 
 
 @app.cell
-def __(mo):
-    mo.md("## Word and Phoneme Analysis")
+def _(mo):
+    mo.md("""
+    ## Word and Phoneme Analysis
+    """)
     return
 
 
 @app.cell
-def __(text_input, text_to_word_phoneme_data):
+def _(text_input, text_to_word_phoneme_data):
     text = text_input.value
     words, phonemes, stress_list, vowel_indices, word_boundaries = text_to_word_phoneme_data(text)
-    return phonemes, stress_list, text, vowel_indices, word_boundaries, words
+    return phonemes, stress_list, vowel_indices, word_boundaries, words
 
 
 @app.cell
-def __(mo, phonemes, stress_list, word_boundaries, words):
+def _(mo, phonemes, stress_list, word_boundaries, words):
     word_phoneme_display = []
     for _i in range(len(word_boundaries) - 1):
         _start_idx = word_boundaries[_i]
@@ -138,23 +160,27 @@ def __(mo, phonemes, stress_list, word_boundaries, words):
 
     word_phoneme_md = mo.md("\n\n".join(word_phoneme_display))
     word_phoneme_md
-    return (word_phoneme_display, word_phoneme_md)
-
-
-@app.cell
-def __(mo):
-    mo.md("## Stress Control")
     return
 
 
 @app.cell
-def __(mo):
-    mo.md("**Note**: 0 = no stress, 1 = primary stress, 2 = secondary stress. Only vowels can have stress.")
+def _(mo):
+    mo.md("""
+    ## Stress Control
+    """)
     return
 
 
 @app.cell
-def __(mo, phonemes, stress_list, vowel_indices):
+def _(mo):
+    mo.md("""
+    **Note**: 0 = no stress, 1 = primary stress, 2 = secondary stress. Only vowels can have stress.
+    """)
+    return
+
+
+@app.cell
+def _(mo, phonemes, stress_list, vowel_indices):
     stress_sliders_array = mo.ui.array([
         mo.ui.slider(
             start=0,
@@ -170,7 +196,7 @@ def __(mo, phonemes, stress_list, vowel_indices):
 
 
 @app.cell
-def __(VOWEL_PHONEMES, mo, phonemes, stress_sliders_array, vowel_indices):
+def _(VOWEL_PHONEMES, mo, phonemes, stress_sliders_array):
     stress_slider_displays = []
     _slider_idx = 0
     for _phoneme_idx in range(len(phonemes)):
@@ -191,26 +217,27 @@ def __(VOWEL_PHONEMES, mo, phonemes, stress_sliders_array, vowel_indices):
             )
 
     mo.Html(f"<div style='overflow-x: auto; white-space: nowrap;'>{mo.hstack(stress_slider_displays, justify='start', wrap=False)}</div>")
-    return (stress_slider_displays,)
-
-
-@app.cell
-def __(stress_list, stress_sliders_array, vowel_indices):
-    adjusted_stress_list = stress_list.copy()
-    for _idx in range(len(vowel_indices)):
-        adjusted_stress_list[vowel_indices[_idx]] = int(stress_sliders_array.value[_idx])
-
-    return (adjusted_stress_list,)
-
-
-@app.cell
-def __(mo):
-    mo.md("## Stress Validation")
     return
 
 
 @app.cell
-def __(VOWEL_PHONEMES, adjusted_stress_list, phonemes, word_boundaries, words):
+def _(stress_list, stress_sliders_array, vowel_indices):
+    adjusted_stress_list = stress_list.copy()
+    for _idx in range(len(vowel_indices)):
+        adjusted_stress_list[vowel_indices[_idx]] = int(stress_sliders_array.value[_idx])
+    return (adjusted_stress_list,)
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    ## Stress Validation
+    """)
+    return
+
+
+@app.cell
+def _(VOWEL_PHONEMES, adjusted_stress_list, phonemes, word_boundaries, words):
     stress_errors = []
 
     for _word_idx in range(len(word_boundaries) - 1):
@@ -240,36 +267,35 @@ def __(VOWEL_PHONEMES, adjusted_stress_list, phonemes, word_boundaries, words):
             stress_errors.append(
                 f"Word {_word_idx} ({_word_label}): must have at most 1 secondary stress (2), but has {_stress_2_count}"
             )
-
     return (stress_errors,)
 
 
 @app.cell
-def __(mo, stress_errors):
+def _(mo, stress_errors):
     if stress_errors:
         error_msg = "**Stress Validation Errors:**\n\n" + "\n\n".join([f"- {err}" for err in stress_errors])
         mo.callout(error_msg, kind="danger")
     else:
         mo.callout("**Stress Validation:** All rules passed ✓", kind="success")
-    return ()
+    return
 
 
 @app.cell
-def __(mo):
+def _(mo):
     show_predictions_toggle = mo.ui.checkbox(value=False, label="Show Predicted Values (Duration and F0)")
     show_predictions_toggle
     return (show_predictions_toggle,)
 
 
 @app.cell
-def __(mo, show_predictions_toggle):
+def _(mo, show_predictions_toggle):
     if show_predictions_toggle.value:
         mo.md("### Predicted Duration (seconds)")
-    return ()
+    return
 
 
 @app.cell
-def __(ARPA_PHONEMES, forwarder, numpy, phonemes, speaker_id_input, torch):
+def _(ARPA_PHONEMES, forwarder, numpy, phonemes, speaker_id_input, torch):
     phoneme_to_id = {ph: i for i, ph in enumerate(ARPA_PHONEMES)}
     phoneme_ids = numpy.array(
         [phoneme_to_id[ph] for ph in phonemes], dtype=numpy.int64
@@ -285,39 +311,34 @@ def __(ARPA_PHONEMES, forwarder, numpy, phonemes, speaker_id_input, torch):
     predicted_durations[0] = 0.08
     predicted_durations[-1] = 0.08
     predicted_durations = numpy.clip(predicted_durations, 0.01, None)
-
-    return (
-        duration_output,
-        phoneme_ids,
-        phoneme_ids_tensor,
-        phoneme_to_id,
-        predicted_durations,
-    )
+    return phoneme_ids, phoneme_ids_tensor, predicted_durations
 
 
 @app.cell
-def __(mo, phonemes, predicted_durations, show_predictions_toggle):
+def _(mo, phonemes, predicted_durations, show_predictions_toggle):
     if show_predictions_toggle.value:
         duration_text = " | ".join([f"{phonemes[i]}: {predicted_durations[i]:.3f}s" for i in range(len(phonemes))])
         mo.md(f"**Predicted durations**: {duration_text}")
-    return ()
+    return
 
 
 @app.cell
-def __(mo, show_predictions_toggle):
+def _(mo, show_predictions_toggle):
     if show_predictions_toggle.value:
         mo.md("### Predicted F0 (Pitch) - Log Scale")
-    return ()
+    return
 
 
 @app.cell
-def __(
+def _(
     adjusted_stress_list,
     forwarder,
     numpy,
     phoneme_ids_tensor,
+    phonemes,
     predicted_durations,
     speaker_id_input,
+    step_num_slider,
     torch,
     vowel_indices,
 ):
@@ -330,50 +351,90 @@ def __(
         torch.tensor(vowel_indices, dtype=torch.long).to(forwarder.device)
     ]
 
-    f0_output = forwarder.yukarin_esa_generator(
+    noise_f0_list = [torch.randn(len(phonemes), device=forwarder.device)]
+    noise_vuv_list = [torch.randn(len(phonemes), device=forwarder.device)]
+
+    f0_output = forwarder.yukarin_esad_generator(
+        noise_f0_list=noise_f0_list,
+        noise_vuv_list=noise_vuv_list,
         phoneme_ids_list=phoneme_ids_tensor_list,
         phoneme_durations_list=durations_tensor_list,
         phoneme_stress_list=stress_tensor_list,
         vowel_index_list=vowel_indices_tensor_list,
         speaker_id=numpy.array([speaker_id_input.value]),
+        step_num=step_num_slider.value,
     )
 
     predicted_f0_vowels_log = f0_output.f0[0].cpu().numpy()
     predicted_vuv_vowels = f0_output.vuv[0].cpu().numpy()
-
-    return (
-        durations_tensor_list,
-        f0_output,
-        phoneme_ids_tensor_list,
-        predicted_f0_vowels_log,
-        predicted_vuv_vowels,
-        stress_tensor_list,
-        vowel_indices_tensor_list,
-    )
+    return (predicted_f0_vowels_log,)
 
 
 @app.cell
-def __(mo, numpy, phonemes, predicted_f0_vowels_log, show_predictions_toggle, vowel_indices):
+def _(
+    mo,
+    numpy,
+    phonemes,
+    predicted_f0_vowels_log,
+    show_predictions_toggle,
+    vowel_indices,
+):
     if show_predictions_toggle.value:
         f0_text = " | ".join([f"{phonemes[vowel_indices[i]]}: {numpy.exp(predicted_f0_vowels_log[i]):.1f}Hz (log={predicted_f0_vowels_log[i]:.2f})" for i in range(len(vowel_indices))])
         mo.md(f"**Predicted F0 values**: {f0_text}")
-    return ()
-
-
-@app.cell
-def __(mo):
-    mo.md("## Prosody Control")
     return
 
 
 @app.cell
-def __(mo):
-    mo.md("### Duration Control (seconds)")
+def _(mo):
+    mo.md("""
+    ## Diffusion Settings
+    """)
     return
 
 
 @app.cell
-def __(mo, phonemes, predicted_durations):
+def _(mo):
+    step_num_slider = mo.ui.slider(
+        start=1,
+        stop=50,
+        step=1,
+        value=10,
+        label="Diffusion Step Number",
+    )
+    mo.md(f"""
+    **Diffusion Step Number**: Controls the quality vs speed trade-off.
+    Higher values = better quality but slower generation.
+
+    {step_num_slider}
+    """)
+    return (step_num_slider,)
+
+
+@app.cell
+def _(mo, step_num_slider):
+    mo.md(f"Current value: **{step_num_slider.value}**")
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    ## Prosody Control
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    ### Duration Control (seconds)
+    """)
+    return
+
+
+@app.cell
+def _(mo, phonemes, predicted_durations):
     if predicted_durations is not None:
         _default_durations = predicted_durations
     else:
@@ -396,7 +457,7 @@ def __(mo, phonemes, predicted_durations):
 
 
 @app.cell
-def __(duration_slider_widgets, mo, phonemes):
+def _(duration_slider_widgets, mo, phonemes):
     duration_slider_displays = [
         mo.vstack([
             mo.md(f"**{phonemes[_i]}**"),
@@ -406,29 +467,33 @@ def __(duration_slider_widgets, mo, phonemes):
         for _i in range(len(phonemes))
     ]
     mo.Html(f"<div style='overflow-x: auto; white-space: nowrap;'>{mo.hstack(duration_slider_displays, justify='start', wrap=False)}</div>")
-    return (duration_slider_displays,)
+    return
 
 
 @app.cell
-def __(duration_slider_widgets, numpy):
+def _(duration_slider_widgets, numpy):
     durations = numpy.array(duration_slider_widgets.value, dtype=numpy.float32)
     return (durations,)
 
 
 @app.cell
-def __(mo):
-    mo.md("### F0 (Pitch) Control for Vowels")
+def _(mo):
+    mo.md("""
+    ### F0 (Pitch) Control for Vowels
+    """)
     return
 
 
 @app.cell
-def __(mo):
-    mo.md("**Note**: Values are in log scale internally. Displayed values are in Hz (exponential of log values). Range: 3.0-6.5 (log) ≈ 20-665 Hz")
+def _(mo):
+    mo.md("""
+    **Note**: Values are in log scale internally. Displayed values are in Hz (exponential of log values). Range: 3.0-6.5 (log) ≈ 20-665 Hz
+    """)
     return
 
 
 @app.cell
-def __(mo, phonemes, predicted_f0_vowels_log, vowel_indices):
+def _(mo, phonemes, predicted_f0_vowels_log, vowel_indices):
     if predicted_f0_vowels_log is not None:
         _default_f0_log = predicted_f0_vowels_log
     else:
@@ -449,7 +514,7 @@ def __(mo, phonemes, predicted_f0_vowels_log, vowel_indices):
 
 
 @app.cell
-def __(VOWEL_PHONEMES, f0_log_slider_widgets, mo, numpy, phonemes, vowel_indices):
+def _(VOWEL_PHONEMES, f0_log_slider_widgets, mo, numpy, phonemes):
     f0_slider_displays = []
     _slider_idx = 0
     for _phoneme_idx in range(len(phonemes)):
@@ -472,23 +537,25 @@ def __(VOWEL_PHONEMES, f0_log_slider_widgets, mo, numpy, phonemes, vowel_indices
                 ])
             )
     mo.Html(f"<div style='overflow-x: auto; white-space: nowrap;'>{mo.hstack(f0_slider_displays, justify='start', wrap=False)}</div>")
-    return (f0_slider_displays,)
+    return
 
 
 @app.cell
-def __(f0_log_slider_widgets, numpy):
+def _(f0_log_slider_widgets, numpy):
     f0_vowels_log = numpy.array(f0_log_slider_widgets.value, dtype=numpy.float32)
     return (f0_vowels_log,)
 
 
 @app.cell
-def __(mo):
-    mo.md("## Audio Synthesis")
+def _(mo):
+    mo.md("""
+    ## Audio Synthesis
+    """)
     return
 
 
 @app.cell
-def __(
+def _(
     durations,
     f0_vowels_log,
     forwarder,
@@ -528,23 +595,11 @@ def __(
     )
 
     wave = wave_outputs[0].wave.cpu().numpy()
-    return (
-        f0_frames_log,
-        frame_length,
-        phoneme_frames,
-        phoneme_times,
-        rate,
-        vowel_end_frames,
-        vowel_end_times,
-        vowel_start_frames,
-        vowel_start_times,
-        wave,
-        wave_outputs,
-    )
+    return (wave,)
 
 
 @app.cell
-def __(base64, io, mo, soundfile, wave):
+def _(base64, io, mo, soundfile, wave):
     buffer = io.BytesIO()
     soundfile.write(buffer, wave, 24000, format="WAV")
     buffer.seek(0)
@@ -552,7 +607,7 @@ def __(base64, io, mo, soundfile, wave):
     audio_html = f'<audio controls src="data:audio/wav;base64,{audio_base64}"></audio>'
 
     mo.Html(audio_html)
-    return audio_base64, audio_html, buffer
+    return
 
 
 if __name__ == "__main__":
