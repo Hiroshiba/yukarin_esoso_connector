@@ -63,7 +63,7 @@ def _(mo):
         label="Yukarin ES Model Directory",
     )
     model_dir_esad_input = mo.ui.text(
-        value="./hiho_models/yukarin_esad/init-rectified_flow-lr1e-03-block8-try0",
+        value="./hiho_models/yukarin_esad/up-rectified_flow-lr1e-03-wd1e-01-block8-try0",
         label="Yukarin ESAD Model Directory",
     )
     model_dir_esosoav_input = mo.ui.text(
