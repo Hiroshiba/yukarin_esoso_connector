@@ -58,6 +58,27 @@ def _(mo):
 
 @app.cell
 def _(mo):
+    mo.md("""
+    ### 話者情報（LibriTTS データ数トップ10）
+
+    | 話者ID | 学習データ数 |
+    |--------|------------|
+    | 629 | 515 |
+    | 1200 | 487 |
+    | 883 | 458 |
+    | 704 | 447 |
+    | 950 | 400 |
+    | 595 | 398 |
+    | 210 | 397 |
+    | 462 | 382 |
+    | 332 | 380 |
+    | 1128 | 378 |
+    """)
+    return
+
+
+@app.cell
+def _(mo):
     model_dir_input = mo.ui.text(
         value="./hiho_models/yukarin_es/grad_acc-lr1e-02-d1e-03-ga4-try0",
         label="Yukarin ES Model Directory",
@@ -66,12 +87,16 @@ def _(mo):
         value="./hiho_models/yukarin_esad/up-rectified_flow-lr1e-03-wd1e-01-block8-try0",
         label="Yukarin ESAD Model Directory",
     )
-    model_dir_esosoav_input = mo.ui.text(
-        value="./hiho_models/yukarin_esosoav/noac-lr2e-04-d1e-02-bs32-try0",
-        label="Yukarin ESOSOAV Model Directory",
+    model_dir_esosoad_input = mo.ui.text(
+        value="./hiho_models/yukarin_esosoad/esosoad-rect-RAdam-lr1e-02-wd1e-04-bs32-bn8-h128-ml844",
+        label="Yukarin ESOSOAD Model Directory",
+    )
+    hifigan_model_path_input = mo.ui.text(
+        value="./hiho_models/hifi-gan/hifi-vv16-v1-try1/g_01000000",
+        label="HiFi-GAN Model Path",
     )
     speaker_id_input = mo.ui.number(
-        value=128,
+        value=1200,
         label="Speaker ID",
         start=0,
         step=1,
@@ -81,10 +106,11 @@ def _(mo):
         label="Use GPU",
     )
 
-    mo.vstack([model_dir_input, model_dir_esad_input, model_dir_esosoav_input, speaker_id_input, use_gpu_input])
+    mo.vstack([model_dir_input, model_dir_esad_input, model_dir_esosoad_input, hifigan_model_path_input, speaker_id_input, use_gpu_input])
     return (
+        hifigan_model_path_input,
         model_dir_esad_input,
-        model_dir_esosoav_input,
+        model_dir_esosoad_input,
         model_dir_input,
         speaker_id_input,
         use_gpu_input,
@@ -95,8 +121,9 @@ def _(mo):
 def _(
     Forwarder,
     UPath,
+    hifigan_model_path_input,
     model_dir_esad_input,
-    model_dir_esosoav_input,
+    model_dir_esosoad_input,
     model_dir_input,
     torch,
     use_gpu_input,
@@ -106,7 +133,8 @@ def _(
     forwarder = Forwarder(
         yukarin_es_model_dir=UPath(model_dir_input.value),
         yukarin_esad_model_dir=UPath(model_dir_esad_input.value),
-        yukarin_esosoav_model_dir=UPath(model_dir_esosoav_input.value),
+        yukarin_esosoad_model_dir=UPath(model_dir_esosoad_input.value),
+        hifigan_model_path=UPath(hifigan_model_path_input.value),
         use_gpu=use_gpu_input.value,
     )
     return (forwarder,)
@@ -332,13 +360,13 @@ def _(mo, show_predictions_toggle):
 @app.cell
 def _(
     adjusted_stress_list,
+    esad_step_num_slider,
     forwarder,
     numpy,
     phoneme_ids_tensor,
     phonemes,
     predicted_durations,
     speaker_id_input,
-    step_num_slider,
     torch,
     vowel_indices,
 ):
@@ -362,7 +390,7 @@ def _(
         phoneme_stress_list=stress_tensor_list,
         vowel_index_list=vowel_indices_tensor_list,
         speaker_id=numpy.array([speaker_id_input.value]),
-        step_num=step_num_slider.value,
+        step_num=esad_step_num_slider.value,
     )
 
     predicted_f0_vowels_log = f0_output.f0[0].cpu().numpy()
@@ -382,38 +410,6 @@ def _(
     if show_predictions_toggle.value:
         f0_text = " | ".join([f"{phonemes[vowel_indices[i]]}: {numpy.exp(predicted_f0_vowels_log[i]):.1f}Hz (log={predicted_f0_vowels_log[i]:.2f})" for i in range(len(vowel_indices))])
         mo.md(f"**Predicted F0 values**: {f0_text}")
-    return
-
-
-@app.cell
-def _(mo):
-    mo.md("""
-    ## Diffusion Settings
-    """)
-    return
-
-
-@app.cell
-def _(mo):
-    step_num_slider = mo.ui.slider(
-        start=1,
-        stop=50,
-        step=1,
-        value=10,
-        label="Diffusion Step Number",
-    )
-    mo.md(f"""
-    **Diffusion Step Number**: Controls the quality vs speed trade-off.
-    Higher values = better quality but slower generation.
-
-    {step_num_slider}
-    """)
-    return (step_num_slider,)
-
-
-@app.cell
-def _(mo, step_num_slider):
-    mo.md(f"Current value: **{step_num_slider.value}**")
     return
 
 
@@ -474,6 +470,20 @@ def _(duration_slider_widgets, mo, phonemes):
 def _(duration_slider_widgets, numpy):
     durations = numpy.array(duration_slider_widgets.value, dtype=numpy.float32)
     return (durations,)
+
+
+@app.cell
+def _(mo):
+    esad_step_num_slider = mo.ui.slider(
+        start=1,
+        stop=50,
+        step=1,
+        value=10,
+        label="ESAD Diffusion Step (F0 Generation)",
+        show_value=True,
+    )
+    esad_step_num_slider
+    return (esad_step_num_slider,)
 
 
 @app.cell
@@ -555,16 +565,32 @@ def _(mo):
 
 
 @app.cell
+def _(mo):
+    esosoad_step_num_slider = mo.ui.slider(
+        start=1,
+        stop=50,
+        step=1,
+        value=10,
+        label="ESOSOAD Diffusion Step (Audio Generation)",
+        show_value=True,
+    )
+    esosoad_step_num_slider
+    return (esosoad_step_num_slider,)
+
+
+@app.cell
 def _(
     durations,
+    esosoad_step_num_slider,
     f0_vowels_log,
     forwarder,
     numpy,
     phoneme_ids,
     speaker_id_input,
+    torch,
     vowel_indices,
 ):
-    rate = 24000 / 256
+    rate = forwarder.sampling_rate / forwarder.hop_size
 
     phoneme_times = numpy.cumsum(numpy.concatenate([[0], durations]))
     frame_length = int(phoneme_times[-1] * rate)
@@ -588,20 +614,30 @@ def _(
     ):
         f0_frames_log[start_frame:end_frame] = f0_vowels_log[_j]
 
-    wave_outputs = forwarder.yukarin_esosoav_generator(
-        f0_list=[f0_frames_log],
-        phoneme_list=[phoneme_frames],
+    spec_output_size = forwarder.yukarin_esosoad_generator.config.network.output_size
+    noise_spec = torch.randn(1, frame_length, spec_output_size, device=forwarder.device)
+
+    spec_output = forwarder.yukarin_esosoad_generator(
+        f0=torch.from_numpy(f0_frames_log).unsqueeze(0).to(forwarder.device),
+        phoneme=torch.from_numpy(phoneme_frames).unsqueeze(0).to(forwarder.device),
+        noise_spec=noise_spec,
         speaker_id=numpy.array([speaker_id_input.value]),
+        length=numpy.array([frame_length]),
+        step_num=esosoad_step_num_slider.value,
     )
 
-    wave = wave_outputs[0].wave.cpu().numpy()
+    spec = spec_output.spec[0]  # (L, C)
+    spec = spec.transpose(0, 1).unsqueeze(0).float()  # (1, C, L)
+
+    wave = forwarder.hifigan_generator(spec)
+    wave = wave.squeeze().cpu().numpy()
     return (wave,)
 
 
 @app.cell
-def _(base64, io, mo, soundfile, wave):
+def _(base64, forwarder, io, mo, soundfile, wave):
     buffer = io.BytesIO()
-    soundfile.write(buffer, wave, 24000, format="WAV")
+    soundfile.write(buffer, wave, forwarder.sampling_rate, format="WAV")
     buffer.seek(0)
     audio_base64 = base64.b64encode(buffer.read()).decode()
     audio_html = f'<audio controls src="data:audio/wav;base64,{audio_base64}"></audio>'

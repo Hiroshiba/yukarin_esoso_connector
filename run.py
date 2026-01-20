@@ -11,10 +11,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--yukarin_es_model_dir", required=True, type=UPath)
     parser.add_argument("--yukarin_esad_model_dir", required=True, type=UPath)
-    parser.add_argument("--yukarin_esosoav_model_dir", required=True, type=UPath)
+    parser.add_argument("--yukarin_esosoad_model_dir", required=True, type=UPath)
+    parser.add_argument("--hifigan_model_path", required=True, type=UPath)
     parser.add_argument("--yukarin_es_iteration", type=int)
     parser.add_argument("--yukarin_esad_iteration", type=int)
-    parser.add_argument("--yukarin_esosoav_iteration", type=int)
+    parser.add_argument("--yukarin_esosoad_iteration", type=int)
     parser.add_argument("--output_dir", type=Path, default=Path("./output"))
     parser.add_argument("--use_gpu", action="store_true")
     parser.add_argument("--text", type=str, nargs="+")
@@ -22,6 +23,7 @@ def main():
     parser.add_argument("--speaker_id", type=int, nargs="+", required=True)
     parser.add_argument("--f0_speaker_id", type=int)
     parser.add_argument("--f0_correct", type=float, default=0)
+    parser.add_argument("--diffusion_step_num", type=int, default=10)
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -29,11 +31,12 @@ def main():
     forwarder = Forwarder(
         yukarin_es_model_dir=args.yukarin_es_model_dir,
         yukarin_esad_model_dir=args.yukarin_esad_model_dir,
-        yukarin_esosoav_model_dir=args.yukarin_esosoav_model_dir,
+        yukarin_esosoad_model_dir=args.yukarin_esosoad_model_dir,
+        hifigan_model_path=args.hifigan_model_path,
         use_gpu=args.use_gpu,
         yukarin_es_iteration=args.yukarin_es_iteration,
         yukarin_esad_iteration=args.yukarin_esad_iteration,
-        yukarin_esosoav_iteration=args.yukarin_esosoav_iteration,
+        yukarin_esosoad_iteration=args.yukarin_esosoad_iteration,
     )
 
     if args.text:
@@ -60,12 +63,13 @@ def main():
                 speaker_id=speaker_id,
                 f0_speaker_id=args.f0_speaker_id,
                 f0_correct=args.f0_correct,
+                diffusion_step_num=args.diffusion_step_num,
             )
 
             output_path = (
                 args.output_dir / f"output_text{text_idx}_speaker{speaker_id}.wav"
             )
-            soundfile.write(output_path, wave, 24000)
+            soundfile.write(output_path, wave, forwarder.sampling_rate)
             print(f"Saved to: {output_path}")
 
 

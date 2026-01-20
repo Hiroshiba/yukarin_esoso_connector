@@ -1,17 +1,20 @@
+import json
 from pathlib import Path
 
 import numpy
 import torch
 import yaml
 from g2p_en import G2p
+from hifi_gan.env import AttrDict
+from hifi_gan.models import Generator as HifiGanGenerator
 from upath import UPath
 from yukarin_es.config import Config as ConfigEs
 from yukarin_es.generator import Generator as GeneratorEs
 from yukarin_es.utility.upath_utility import to_local_path
 from yukarin_esad.config import Config as ConfigEsad
 from yukarin_esad.generator import Generator as GeneratorEsad
-from yukarin_esosoav.config import Config as ConfigEsosoav
-from yukarin_esosoav.generator import Generator as GeneratorEsosoav
+from yukarin_esosoad.config import Config as ConfigEsosoad
+from yukarin_esosoad.generator import Generator as GeneratorEsosoad
 
 from .utility import get_predictor_model_path, remove_weight_norm
 
@@ -207,9 +210,7 @@ def text_to_word_phoneme_data(
 
         word_boundaries.append(len(all_phonemes))
 
-    vowel_indices = [
-        i for i, ph in enumerate(all_phonemes) if ph in VOWEL_PHONEMES
-    ]
+    vowel_indices = [i for i, ph in enumerate(all_phonemes) if ph in VOWEL_PHONEMES]
 
     return words, all_phonemes, all_stress_list, vowel_indices, word_boundaries
 
@@ -219,15 +220,20 @@ class Forwarder:
         self,
         yukarin_es_model_dir: UPath | Path,
         yukarin_esad_model_dir: UPath | Path,
-        yukarin_esosoav_model_dir: UPath | Path,
+        yukarin_esosoad_model_dir: UPath | Path,
+        hifigan_model_path: UPath | Path,
         use_gpu: bool,
         yukarin_es_iteration: int | None = None,
         yukarin_esad_iteration: int | None = None,
-        yukarin_esosoav_iteration: int | None = None,
+        yukarin_esosoad_iteration: int | None = None,
     ):
         yukarin_es_model_dir = UPath(yukarin_es_model_dir)
         yukarin_esad_model_dir = UPath(yukarin_esad_model_dir)
-        yukarin_esosoav_model_dir = UPath(yukarin_esosoav_model_dir)
+        yukarin_esosoad_model_dir = UPath(yukarin_esosoad_model_dir)
+        hifigan_model_path = UPath(hifigan_model_path)
+        hifigan_config_path = hifigan_model_path.parent / "config.json"
+
+        self.device = torch.device("cuda") if use_gpu else torch.device("cpu")
 
         config_es = ConfigEs.from_dict(
             yaml.safe_load((yukarin_es_model_dir / "config.yaml").read_text())
@@ -262,23 +268,36 @@ class Forwarder:
         self.yukarin_esad_generator.predictor.apply(remove_weight_norm)
         print("yukarin_esad loaded!")
 
-        config_esosoav = ConfigEsosoav.from_dict(
-            yaml.safe_load((yukarin_esosoav_model_dir / "config.yaml").read_text())
+        config_esosoad = ConfigEsosoad.from_dict(
+            yaml.safe_load((yukarin_esosoad_model_dir / "config.yaml").read_text())
         )
 
-        predictor_esosoav_path = get_predictor_model_path(
-            yukarin_esosoav_model_dir, iteration=yukarin_esosoav_iteration
+        predictor_esosoad_path = get_predictor_model_path(
+            yukarin_esosoad_model_dir, iteration=yukarin_esosoad_iteration
         )
-        print("yukarin_esosoav predictor:", predictor_esosoav_path)
-        self.yukarin_esosoav_generator = GeneratorEsosoav(
-            config=config_esosoav,
-            predictor=to_local_path(predictor_esosoav_path),
+        print("yukarin_esosoad predictor:", predictor_esosoad_path)
+        self.yukarin_esosoad_generator = GeneratorEsosoad(
+            config=config_esosoad,
+            predictor=to_local_path(predictor_esosoad_path),
             use_gpu=use_gpu,
         )
-        self.yukarin_esosoav_generator.predictor.apply(remove_weight_norm)
-        print("yukarin_esosoav loaded!")
+        self.yukarin_esosoad_generator.predictor.apply(remove_weight_norm)
+        print("yukarin_esosoad loaded!")
 
-        self.device = self.yukarin_es_generator.device
+        hifigan_config = AttrDict(
+            json.loads(to_local_path(hifigan_config_path).read_text())
+        )
+        self.hifigan_generator = HifiGanGenerator(hifigan_config).to(self.device)
+        state_dict = torch.load(
+            to_local_path(hifigan_model_path), map_location=self.device
+        )
+        self.hifigan_generator.load_state_dict(state_dict["generator"])
+        self.hifigan_generator.eval()
+        self.hifigan_generator.remove_weight_norm()
+        self.sampling_rate = hifigan_config.sampling_rate
+        self.hop_size = hifigan_config.hop_size
+        print("hifi-gan loaded!")
+
         self.phoneme_to_id = {ph: i for i, ph in enumerate(ARPA_PHONEMES)}
 
     @torch.no_grad()
@@ -288,6 +307,7 @@ class Forwarder:
         speaker_id: int,
         f0_speaker_id: int | None = None,
         f0_correct: float = 0,
+        diffusion_step_num: int = 10,
     ) -> tuple[numpy.ndarray, tuple]:
         if f0_speaker_id is None:
             f0_speaker_id = speaker_id
@@ -330,7 +350,7 @@ class Forwarder:
             phoneme_stress_list=stress_tensor_list,
             vowel_index_list=vowel_indices_tensor_list,
             speaker_id=numpy.array([f0_speaker_id]),
-            step_num=10,
+            step_num=diffusion_step_num,
         )
 
         f0_vowels = f0_output.f0[0].cpu().numpy()
@@ -339,7 +359,7 @@ class Forwarder:
         f0_vowels = f0_vowels + f0_correct
         f0_vowels[vuv_vowels < 0.5] = 0
 
-        rate = 24000 / 256
+        rate = self.sampling_rate / self.hop_size
 
         phoneme_times = numpy.cumsum(numpy.concatenate([[0], durations]))
         frame_length = int(phoneme_times[-1] * rate)
@@ -363,12 +383,22 @@ class Forwarder:
         ):
             f0_frames[start_frame:end_frame] = f0_vowels[i]
 
-        wave_outputs = self.yukarin_esosoav_generator(
-            f0_list=[f0_frames],
-            phoneme_list=[phoneme_frames],
+        spec_output_size = self.yukarin_esosoad_generator.config.network.output_size
+        noise_spec = torch.randn(1, frame_length, spec_output_size, device=self.device)
+
+        spec_output = self.yukarin_esosoad_generator(
+            f0=torch.from_numpy(f0_frames).unsqueeze(0).to(self.device),
+            phoneme=torch.from_numpy(phoneme_frames).unsqueeze(0).to(self.device),
+            noise_spec=noise_spec,
             speaker_id=numpy.array([speaker_id]),
+            length=numpy.array([frame_length]),
+            step_num=diffusion_step_num,
         )
 
-        wave = wave_outputs[0].wave.cpu().numpy()
+        spec = spec_output.spec[0]  # (L, C)
+        spec = spec.transpose(0, 1).unsqueeze(0).float()  # (1, C, L)
 
-        return wave, (durations, f0_vowels, phoneme_frames, f0_frames)
+        wave = self.hifigan_generator(spec)
+        wave = wave.squeeze().cpu().numpy()
+
+        return wave, (durations, f0_vowels, phoneme_frames, f0_frames, spec)

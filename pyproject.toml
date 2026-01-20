@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = [
     { name = "Hiroshiba", email = "hihokaruta@gmail.com" }
 ]
-description = "English TTS inference connector integrating yukarin_es, yukarin_esad, and yukarin_esosoav"
+description = "English TTS inference connector integrating yukarin_es, yukarin_esad, yukarin_esosoad, and hifi-gan"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -22,13 +22,15 @@ dependencies = [
     "universal-pathlib>=0.2.6",
     "yukarin-es",
     "yukarin-esad",
-    "yukarin-esosoav",
+    "yukarin-esosoad",
+    "hifi-gan",
 ]
 
 [tool.uv.sources]
 yukarin-es = { git = "https://github.com/Hiroshiba/yukarin_es", rev = "d68df1c690fe2c6ba5e0ff7205e0125d93944c1f" }
 yukarin-esad = { git = "https://github.com/Hiroshiba/yukarin_esad", rev = "71bfe03d398823119ba9555fd2b5bf768d01e59d" }
-yukarin-esosoav = { git = "https://github.com/Hiroshiba/yukarin_esosoav", rev = "ccc97782070d35fb1f36a46cb491ecd4ccc31d13" }
+yukarin-esosoad = { git = "https://github.com/Hiroshiba/yukarin_esosoad", rev = "b02734ac2ab3e52cac7394af706357330ebbf613" }
+hifi-gan = { git = "https://github.com/Hiroshiba/hifi-gan", rev = "8f72015f1e7dfa559119b49143ca72eb585ba72e" }
 
 [dependency-groups]
 dev = [
